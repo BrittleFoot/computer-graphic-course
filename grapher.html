@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grapher</title>
+
+    <style type="text/css">
+        body {
+            margin: 0px;
+            padding: 0px;
+            max-width: inherit;
+            font-family: monospace;
+        }
+
+        input {
+            font-family: monospace;
+        }
+
+        .config {
+            padding-top: 2em;
+        }
+
+        .image {
+            padding: 1em 0px;
+        }
+
+        .section {
+            max-width: 800px;
+            margin: auto;
+
+        }
+
+        .range {
+            margin: 0.1em auto;
+        }
+
+        #func {
+            width: 30%;
+            min-width: 148px;
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="config section"> 
+
+        <div class="range">
+            <a>&nbsp;&nbsp;&nbsp;y =</a> <input id="func" type="text" value="pow(x, 2) + cos(x * 10)"/>
+            <a>&nbsp;&nbsp;&nbsp;</a><input type="submit" value="draw" onclick="drawFunc()">
+        </div>
+
+        <div class="range">
+            <a>x</a>
+            <a>from</a> <input class="change-aware" id="x-from" type="number" value="-10" />
+            <a>to</a> <input class="change-aware" id="x-to" type="number" value="10"/>
+        </div>
+
+        <div class="range">
+            <a>y</a>
+            <a>from</a> <input class="change-aware" id="y-from" type="number" value="-10"/>
+            <a>to</a> <input class="change-aware" id="y-to" type="number" value="10"/>
+        </div>
+        
+        <div class="range">
+            <a>&nbsp;step&nbsp;</a>  <input class="change-aware" id="step" type="number" value="0.01" step="0.01"/>
+            <a>&nbsp;&nbsp;autoredraw</a> <input id="autoredraw" type="checkbox" checked />
+            <a>&nbsp;clear last</a> <input id="clear_last" type="checkbox" checked/>
+        </div>
+
+    </div>
+
+    <div class="image section">
+        <canvas id="plot" width="800" height="800"></canvas>
+    </div>
+
+    <script type="text/javascript">
+
+        field = {
+            width: 800,
+            height: 800
+        }
+
+        function parseFunc(string) {
+
+            var func = function(x) {
+                var abs = Math.abs,
+                    acos = Math.acos,
+                    acosh = Math.acosh,
+                    asin = Math.asin,
+                    asinh = Math.asinh,
+                    atan = Math.atan,
+                    atanh = Math.atanh,
+                    atan2 = Math.atan2,
+                    cbrt = Math.cbrt,
+                    ceil = Math.ceil,
+                    clz32 = Math.clz32,
+                    cos = Math.cos,
+                    cosh = Math.cosh,
+                    exp = Math.exp,
+                    expm1 = Math.expm1,
+                    floor = Math.floor,
+                    fround = Math.fround,
+                    hypot = Math.hypot,
+                    imul = Math.imul,
+                    log = Math.log,
+                    log1p = Math.log1p,
+                    log10 = Math.log10,
+                    log2 = Math.log2,
+                    max = Math.max,
+                    min = Math.min,
+                    pow = Math.pow,
+                    random = Math.random,
+                    round = Math.round,
+                    sign = Math.sign,
+                    sin = Math.sin,
+                    sinh = Math.sinh,
+                    sqrt = Math.sqrt,
+                    tan = Math.tan,
+                    tanh = Math.tanh,
+                    trunc = Math.trunc,
+                    E = Math.E,
+                    LN2 = Math.LN2,
+                    LN10 = Math.LN10,
+                    LOG2E = Math.LOG2E,
+                    LOG10E = Math.LOG10E,
+                    PI = Math.PI,
+                    SQRT1_2 = Math.SQRT1_2,
+                    SQRT2 = Math.SQRT2
+                return eval(string)
+            }
+            try {
+                func(0.0001)
+            } catch (err) {
+                throw new Error("Invalid syntax: " + string + "\n" + err.message)
+            }
+
+            return func
+        }
+
+
+        function getProperties() {
+            return {
+                func:  parseFunc (document.getElementById("func").value),
+                xfrom: parseFloat(document.getElementById("x-from").value),
+                xto:   parseFloat(document.getElementById("x-to").value),
+                yfrom: parseFloat(document.getElementById("y-from").value),
+                yto:   parseFloat(document.getElementById("y-to").value),
+                step:  parseFloat(document.getElementById("step").value)
+            }
+        }
+
+        function range(from, to, step) {
+            var size = parseInt((to - from) / step + 1)
+            return Array.from(new Array(size), (_,i) => from + step * i)
+        }
+
+        function drawAxes(ctx, props, field) {
+
+            var rx = x => remapX(x, props, field)
+            var ry = y => remapY(y, props, field)
+
+            var ixfrom = parseInt(props.xfrom),
+                ixto   = parseInt(props.xto),
+                iyfrom = parseInt(props.yfrom),
+                iyto   = parseInt(props.yto)
+
+            var xthin = Math.pow(10, parseInt(Math.log10(props.xto - props.xfrom) - 1)),
+                ythin = Math.pow(10, parseInt(Math.log10(props.yto - props.yfrom) - 1))
+
+            ctx.beginPath()
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(240, 240, 240)'
+
+            for (i = ixfrom; i < ixto; i += xthin) {
+                ctx.moveTo(rx(i), ry(props.yfrom))
+                ctx.lineTo(rx(i), ry(props.yto))
+            }
+
+            for (i = iyfrom; i < iyto; i += ythin) {
+                ctx.moveTo(rx(props.xfrom), ry(i))
+                ctx.lineTo(rx(props.xto), ry(i))
+            }
+
+            ctx.stroke()
+
+            // Ox Oy
+            ctx.beginPath()
+            ctx.strokeStyle = 'green'
+
+            ctx.moveTo(rx(props.xfrom), ry(0))
+            ctx.lineTo(rx(props.xto), ry(0))
+            ctx.moveTo(rx(0), ry(props.yfrom))
+            ctx.lineTo(rx(0), ry(props.yto))
+
+            ctx.stroke()
+        }
+
+        function remapX(x, props, field) {
+            return (x - props.xfrom) / props.xsize * field.width
+        }
+
+        function remapY(y, props, field) {
+            return - (y - props.yfrom) / props.ysize * field.height + field.height
+        }
+
+
+        function drawFunc() {
+            var canvas = document.getElementById("plot")
+            var ctx = canvas.getContext("2d")
+
+            if (document.getElementById("clear_last").checked)
+                ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+            var props = getProperties()
+
+            var X = range(props.xfrom, props.xto, props.step)
+
+            props.xsize = props.xto - props.xfrom
+            props.ysize = props.yto - props.yfrom
+
+            var vX = X.map(x => remapX(x, props, field))
+            var vY = X.map(x => remapY(props.func(x), props, field))
+
+
+            drawAxes(ctx, props, field)
+
+            ctx.beginPath()
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'black'
+
+            ctx.moveTo(vX[0], vY[0])
+            vX.map((x, i) => ctx.lineTo(x, vY[i]))
+            ctx.stroke()
+        }
+
+        window.onload = function() {
+
+            var cas = document.getElementsByClassName("change-aware")
+            for (var i = 0; i < cas.length; i++) {
+                cas[i].onchange = e => {
+                    if (document.getElementById("autoredraw").checked) 
+                        drawFunc()
+                }
+            }
+
+            drawFunc()
+        }
+
+    </script>
+
+</body>
+</html>

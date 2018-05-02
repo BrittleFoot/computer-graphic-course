@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grapher</title>
+
+    <style type="text/css">
+        body {
+            margin: 0px;
+            padding: 0px;
+            max-width: inherit;
+            font-family: monospace;
+        }
+
+        input {
+            font-family: monospace;
+        }
+
+        .config {
+            padding-top: 2em;
+        }
+
+        .image {
+            padding: 1em 0px;
+        }
+
+        .section {
+            max-width: 800px;
+            margin: auto;
+
+        }
+
+        .range {
+            margin: 0.1em auto;
+        }
+
+        #func {
+            width: 30%;
+            min-width: 148px;
+        }
+
+        #plot {
+            border: 1px solid black;
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="config section"> 
+
+        <div class="range">
+            <a>y =</a> <input id="func" type="text" value="(a*x^2 + b*x + c) / (x + d)" disabled="true" />
+            <a>&nbsp;&nbsp;&nbsp;</a><input type="submit" value="draw" onclick="drawFunc()">
+        </div>
+
+        <div class="range">
+            <a>a = </a> <input class="change-aware" id="a" type="number" value="1" />
+            <a>b = </a> <input class="change-aware" id="b" type="number" value="2"/>
+        </div>
+
+        <div class="range">
+            <a>c = </a> <input class="change-aware" id="c" type="number" value="-3"/>
+            <a>d = </a> <input class="change-aware" id="d" type="number" value="2"/>
+        </div>
+        
+        <div class="range">
+            <a>pixel size</a> <input class="change-aware" id="pixelSize" type="number" value="4" min="1"/>
+            <a>&nbsp;&nbsp;autoredraw</a> <input id="autoredraw" type="checkbox" checked />
+        </div>
+
+    </div>
+
+    <div class="image section">
+        <canvas id="plot" width="800" height="800"></canvas>
+    </div>
+
+    <script type="text/javascript" src="brez.js"></script>
+
+</body>
+</html>
