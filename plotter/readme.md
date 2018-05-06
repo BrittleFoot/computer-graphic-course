@@ -1,0 +1,1 @@
+Small page to plot some `y = f(x)` functions.

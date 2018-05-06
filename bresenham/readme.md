@@ -1,0 +1,1 @@
+Designed to be an example of drawing hyperbola-like function in form of a non-canonical equation `y = (ax^2 + bx + c) / (x + d)` with Bresenham's algorithm ideas.
