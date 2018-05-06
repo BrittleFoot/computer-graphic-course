@@ -1,0 +1,1 @@
+Find minimal right triangle that covers given polygone

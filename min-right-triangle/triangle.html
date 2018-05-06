@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimal Right Triangle</title>
+
+    <style type="text/css">
+        body {
+            margin: 0px;
+            padding: 0px;
+            max-width: inherit;
+            font-family: monospace;
+        }
+
+        input {
+            font-family: monospace;
+        }
+
+        .config {
+            padding-top: 2em;
+        }
+
+        .image {
+            padding: 1em 0px;
+        }
+
+        .section {
+            max-width: 800px;
+            margin: auto;
+
+        }
+
+        .range {
+            margin: 0.1em auto;
+        }
+
+        #func {
+            width: 30%;
+            min-width: 148px;
+        }
+
+        #plot {
+            border: 1px solid black;
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="config section"> 
+
+        <div class="range">
+            <center>
+                <input type="button" value="backspase" onclick="cancel()">
+                <input type="button" value="delete" onclick="del()">
+            </center>
+        </div>
+
+    </div>
+
+    <div class="image section">
+        <canvas id="plot" width="800" height="800"></canvas>
+    </div>
+
+    <script type="text/javascript" src="point.js"></script>
+    <script type="text/javascript" src="triangle.js"></script>
+
+</body>
+</html>
