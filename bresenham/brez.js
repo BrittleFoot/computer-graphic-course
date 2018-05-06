@@ -94,6 +94,15 @@ function drawLine(ctx, props, a, b) {
     }
 }
 
+function drawExtendedLine(ctx, props, a, b, extraSize=1000) {
+    let diff = b.sub(a)
+
+    let A = b.add(diff.norm().stratch(extraSize))
+    let B = a.sub(diff.norm().stratch(extraSize))
+
+    return drawLine(ctx, props, A, B)
+}
+
 
 function remapX(x, {xfrom, xsize, width}) {
     return (x - xfrom) / xsize * width
@@ -200,7 +209,9 @@ function drawBranch(ctx, props, p0, {x, y}, branchDirs, delta, stop) {
 
     while (stop(p)) {
         drawPixel(ctx, props, p0.add(p))
-        p = min(branchDirs.map(e => p.add(e)), e => Math.abs(delta(e)))
+
+        let availableDirs = branchDirs.map(e => p.add(e))
+        p = min(availableDirs, e => Math.abs(delta(e)))
     }
 }
 
@@ -210,8 +221,8 @@ function drawHyp2(ctx, props, hyp, median1, median2) {
     const equ = props
 
     // equal funcions since field is rectangle 
-    const resizex = value => Math.trunc(value / xsize * width / pixelSize)
-    const resizey = value => Math.trunc(value / ysize * height / pixelSize)
+    const resizex = value => value / xsize * width / pixelSize
+    const resizey = value => value / ysize * height / pixelSize
     rs = resizex
 
     const { A, B, C } = resized = {
@@ -220,14 +231,30 @@ function drawHyp2(ctx, props, hyp, median1, median2) {
         C: resizex(hyp.C)
     }
 
+
     const { a, b, c, d } = equ
 
     const plotAsympCenter = new Point(-d, -d * a + b - d).let(resizex).mul({x:1, y:-1})
-    const p0 = new Point(10, 10).let(resizex).add(plotAsympCenter)
+    const p0 = new Point(10, 10).let(resizex).add(plotAsympCenter).let(Math.trunc)
+
     const focA = new Point(C, 0).rot(equ.alpha).let(Math.trunc)
     const focB = new Point(-C, 0).rot(equ.alpha).let(Math.trunc)
 
+    const pA = new Point(A, 0).rot(equ.alpha).let(Math.trunc)
+    const mA = new Point(-A, 0).rot(equ.alpha).let(Math.trunc)
+    const pB = new Point(0, B).rot(equ.alpha).let(Math.trunc)
+    const mB = new Point(0, -B).rot(equ.alpha).let(Math.trunc)
+
+    ctx.fillStyle = 'red'
+    drawExtendedLine(ctx, props, p0.add(pA), p0.add(pB), 0)
+
     const P = new Point(A, 0).rot(equ.alpha).let(Math.trunc)
+
+    ctx.fillStyle = 'rgba(235, 235, 235)'
+
+    drawExtendedLine(ctx, props, p0.add(focA), p0.add(focB))
+    drawExtendedLine(ctx, props, p0.add(focA.rot(Math.PI / 2)), p0.add(focB.rot(Math.PI / 2)))
+
 
     const delta = dlt = point => Math.abs(point.sub(focA).len() - point.add(focA).len()) - 2 * A
     
@@ -237,21 +264,36 @@ function drawHyp2(ctx, props, hyp, median1, median2) {
         [-1,  1], [ 0,  1], [ 1,  1]
     ].map(e => new Point(...e))
 
-    const frontUp = point => points.filter(pt => point.sinBtw(pt) >= 0 && point.cosBtw(pt) >= -Math.PI / 6)
-    const frontDown = point => points.filter(pt => point.sinBtw(pt) <= 0 && point.cosBtw(pt) >= -Math.PI / 6)
 
-    drawBranch(ctx, props, p0, P, frontUp(P), delta, p => p.len() < 1000)
-    drawBranch(ctx, props, p0, P, frontDown(P), delta, p => p.len() < 1000)
+    const directlyOnBranch = (point, pt) => { let c = point.cosBtw(pt); return c >= -0.7 }
+
+    const sinTh = 0.3
+
+    const frontUp = point => points.filter(pt => point.sinBtw(pt) >= -sinTh && directlyOnBranch(point, pt))
+    const frontDown = point => points.filter(pt => point.sinBtw(pt) <= sinTh && directlyOnBranch(point, pt))
+    const stop = p => p.len() < 1000
+
+    const facingU = point => points.filter(pt => point.cosBtw(pt) >= 0.3 && point.sinBtw(pt) >= -0.4)
+    const facingD = point => points.filter(pt => point.cosBtw(pt) >= 0.3 && point.sinBtw(pt) <= 0.4)
+
+    const up = frontUp  
+    const dw = frontDown
+
+    ctx.fillStyle = 'black'
+
+    drawBranch(ctx, props, p0, P, facingU(pA.sub(pB)), delta, stop)
+    drawBranch(ctx, props, p0, P, facingD(pA.sub(mB)), delta, stop)
 
     const Q = P.stratch(-1)
 
-    frontUp(P).forEach(p => {
+    facingU(pA.sub(pB)).forEach(p => {
         drawPixel(ctx, props, p0.add(p.stratch(2)))
     })
 
-    drawBranch(ctx, props, p0, Q, frontUp(Q), delta, p => p.len() < 1000)
-    drawBranch(ctx, props, p0, Q, frontDown(Q), delta, p => p.len() < 1000)
+    drawBranch(ctx, props, p0, Q, facingU(mA.sub(mB)), delta, stop)
+    drawBranch(ctx, props, p0, Q, facingD(mA.sub(pB)), delta, stop)
 
+    ctx.fillStyle = 'green'
     drawPixel(ctx, props, p0)
     drawPixel(ctx, props, p0.add(focA))
     drawPixel(ctx, props, p0.add(focB))
@@ -313,11 +355,13 @@ function drawFunc() {
         B2: -R / B
     }
 
+    props.reversed = false
     if (A2 < 0 && B2 > 0) {
         let t = A2 
         A2 = B2
         B2 = t
         props.alpha = Math.PI / 2 - props.alpha
+        props.reversed = true
     } else {
         props.alpha = Math.PI - props.alpha
     }
@@ -335,7 +379,7 @@ function drawFunc() {
     
 
     // asymp playground 
-    // {
+    {
         const vertical = verticalAsymp(props)
         const horizontal = horizontalAsymp(props)
 
@@ -356,26 +400,19 @@ function drawFunc() {
         const vAsympA = plottablePoint(props.xfrom, vertical(props.xfrom))
         const vAsympB = plottablePoint(props.xto, vertical(props.xto))
 
-        const m1AsympA = plottablePoint(props.xfrom, firstMedianAsymp(props.xfrom))
-        const m1AsympB = plottablePoint(props.xto, firstMedianAsymp(props.xto))
-
-        const m2AsympA = plottablePoint(props.xfrom, secondMedianAsymp(props.xfrom))
-        const m2AsympB = plottablePoint(props.xto, secondMedianAsymp(props.xto))
 
         const hAsympA = plottablePoint(horizontal(), props.yfrom)
         const hAsympB = plottablePoint(horizontal(), props.yto)
         //(1*pow(x,2) + 4*x + 1) / (x + 0)
 
-        ctx.fillStyle = 'rgba(240, 240, 240)'
+        ctx.fillStyle = 'rgba(235, 235, 235)'
         drawLine(ctx, props, vAsympA, vAsympB)
         drawLine(ctx, props, hAsympA, hAsympB)
 
-        drawLine(ctx, props, m1AsympA, m1AsympB)
-        drawLine(ctx, props, m2AsympA, m2AsympB)
-    // }
+    }
     
     ctx.fillStyle = 'black'
-    drawHyp2(ctx, props, hyp, m1, m2)
+    drawHyp2(ctx, props, hyp)
 
     ctx.stroke()
 }
